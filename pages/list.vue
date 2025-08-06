@@ -73,7 +73,12 @@
 
     const config = useRuntimeConfig();
     const supabaseUrl = config.public.supabaseUrl;
-    const supabaseKey = config.public.supabaseKey;
+    const supabaseKey = config.public.supabaseAnonKey;
+    
+    if (!supabaseUrl || !supabaseKey) {
+        throw new Error('Supabase configuration is missing. Please check your environment variables.');
+    }
+    
     const supabase = createClient(supabaseUrl, supabaseKey);
     async function fetchWatchlist() {
         const { data, error } = await supabase

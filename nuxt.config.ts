@@ -3,13 +3,16 @@ export default defineNuxtConfig({
   compatibilityDate: '2025-05-15',
   devtools: { enabled: true },
   modules: ['@nuxtjs/supabase'],
-  supabase:{
+  supabase: {
     redirect: false
   },
   runtimeConfig: {
+    // Private keys (only available on server-side)
+    supabaseServiceKey: process.env.SUPABASE_KEY,
+    // Public keys (exposed to client-side)
     public: {
       supabaseUrl: process.env.SUPABASE_URL,
-      supabaseKey: process.env.SUPABASE_KEY,
+      supabaseAnonKey: process.env.SUPABASE_KEY,
     },
   },
   // Configure server-side rendering and API routes
