@@ -1,5 +1,6 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
-export default defineNuxtConfig({
+export default defineNuxtConfig(
+  {
   compatibilityDate: '2025-05-15',
   devtools: { enabled: true },
   modules: ['@nuxtjs/supabase'],
@@ -16,9 +17,6 @@ export default defineNuxtConfig({
     },
   // Configure server-side rendering and API routes
   nitro: {
-    experimental: {
-      wasm: true
-    },
     routeRules: {
       // Cache market data for 5 minutes
       '/api/markets/**': { 
