@@ -14,7 +14,6 @@ export default defineNuxtConfig({
       supabaseUrl: process.env.SUPABASE_URL,
       supabaseAnonKey: process.env.SUPABASE_KEY,
     },
-  },
   // Configure server-side rendering and API routes
   nitro: {
     experimental: {
