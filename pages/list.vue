@@ -60,8 +60,8 @@
 <script setup lang="ts">
     import { ref } from 'vue';
     import { computed } from 'vue';
-    import { createClient } from '@supabase/supabase-js';
     import ListItem from '~/components/listItem.vue';
+    import type { Database } from '~/types/database';
 
     const materialEfficiencyIndex = ref(0);
     const db_name = 'watchlist';
@@ -71,15 +71,9 @@
         typeName: string;
     };
 
-    const config = useRuntimeConfig();
-    const supabaseUrl = config.public.supabaseUrl;
-    const supabaseKey = config.public.supabaseAnonKey;
+    // Use the built-in Supabase client from @nuxtjs/supabase with types
+    const supabase = useSupabaseClient<Database>();
     
-    if (!supabaseUrl || !supabaseKey) {
-        throw new Error('Supabase configuration is missing. Please check your environment variables.');
-    }
-    
-    const supabase = createClient(supabaseUrl, supabaseKey);
     async function fetchWatchlist() {
         const { data, error } = await supabase
             .from('watchlist')

@@ -1,11 +1,10 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
-export default defineNuxtConfig(
-  {
+export default defineNuxtConfig({
   compatibilityDate: '2025-05-15',
   devtools: { enabled: true },
   modules: ['@nuxtjs/supabase'],
   supabase: {
-    redirect: false
+    redirect: false,
   },
   runtimeConfig: {
     // Private keys (only available on server-side)
@@ -15,6 +14,7 @@ export default defineNuxtConfig(
       supabaseUrl: process.env.SUPABASE_URL,
       supabaseAnonKey: process.env.SUPABASE_KEY,
     },
+  },
   // Configure server-side rendering and API routes
   nitro: {
     routeRules: {
