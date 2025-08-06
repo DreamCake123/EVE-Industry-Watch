@@ -6,11 +6,9 @@ export default defineNuxtConfig({
   supabase:{
     redirect: false
   },
-  runtimeConfig: {
-    public: {
-      supabaseUrl: process.env.SUPABASE_URL,
-      supabaseKey: process.env.SUPABASE_KEY,
-    },
+  publicRuntimeConfig: {
+    supabaseUrl: process.env.NUXT_PUBLIC_SUPABASE_URL,
+    supabaseKey: process.env.NUXT_PUBLIC_SUPABASE_ANON_KEY
   },
   // Configure server-side rendering and API routes
   nitro: {
