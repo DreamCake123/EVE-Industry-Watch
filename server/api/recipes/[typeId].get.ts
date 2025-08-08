@@ -220,13 +220,13 @@ export default defineEventHandler(async (event): Promise<RecipeResponse> => {
       data: recipe
     }
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching recipe:', error)
-    
+    const message = error?.statusMessage || error?.message || 'Failed to fetch recipe data'
     return {
       success: false,
       data: null,
-      error: 'Failed to fetch recipe data'
+      error: message
     }
   }
 })

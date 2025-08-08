@@ -24,6 +24,10 @@ export default defineNuxtConfig({
         base: './assets'
       }
     },
+    serverAssets: [
+      // Make project /assets available to server at runtime
+      { baseName: 'assets', dir: 'assets' }
+    ],
     routeRules: {
       // Cache market data for 5 minutes
       '/api/markets/**': { 
