@@ -85,6 +85,34 @@ async function readCsvRecords(fileName: string): Promise<any[]> {
   throw createError({ statusCode: 404, statusMessage: `Asset not found in assets:/recipes:/fs -> ${fileName}` })
 }
 
+// Helper to read prebuilt JSON assets if available
+async function readJsonRecords(fileName: string): Promise<any[] | null> {
+  const jsonName = fileName.replace('.csv', '.json')
+
+  // Try Nitro server assets first
+  try {
+    const assetsStorage: any = useStorage('assets:')
+    if (assetsStorage) {
+      const text = await assetsStorage.getItem(jsonName)
+      if (text) return JSON.parse(String(text))
+    }
+  } catch {}
+
+  // Try fs fallback
+  const candidates = [
+    path.join(process.cwd(), 'server', 'assets', jsonName),
+    path.join(process.cwd(), 'assets', jsonName)
+  ]
+  for (const p of candidates) {
+    if (fs.existsSync(p)) {
+      const text = fs.readFileSync(p, 'utf-8')
+      return JSON.parse(text)
+    }
+  }
+
+  return null
+}
+
 export default defineEventHandler(async (event): Promise<RecipeResponse> => {
   try {
     const typeId = getRouterParam(event, 'typeId')
@@ -100,20 +128,19 @@ export default defineEventHandler(async (event): Promise<RecipeResponse> => {
 
     const typeIdNumber = Number(typeId)
 
-    // Load CSV datasets robustly
-    const materialRecords = await readCsvRecords('industryActivityMaterials.csv')
+    // Load datasets (prefer JSON built at build time)
+    const materialsJson = await readJsonRecords('industryActivityMaterials.csv')
+    const materialRecords = materialsJson ?? await readCsvRecords('industryActivityMaterials.csv')
 
     let productRecords: any[] = []
-    try {
-      productRecords = await readCsvRecords('industryActivityProducts.csv')
-    } catch {
-      productRecords = []
-    }
+    const productsJson = await readJsonRecords('industryActivityProducts.csv')
+    productRecords = productsJson ?? await readCsvRecords('industryActivityProducts.csv').catch(() => [])
 
     // Parse types for names
     let typeNames: Record<number, string> = {}
+    const typesJson = await readJsonRecords('invTypes.csv')
     try {
-      const typeRecords = await readCsvRecords('invTypes.csv')
+      const typeRecords = typesJson ?? await readCsvRecords('invTypes.csv')
       typeNames = (typeRecords as any[]).reduce((acc: Record<number, string>, record: any) => {
         const id = Number(record.TypeID ?? record.typeID ?? record.typeId)
         const name = record.TypeName ?? record.typeName ?? record.name

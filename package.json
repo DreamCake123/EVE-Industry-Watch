@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "prebuild": "node ./scripts/build-recipes.mjs",
     "build": "nuxt build",
     "dev": "nuxt dev --host 0 --port 3000",
     "generate": "nuxt generate",
