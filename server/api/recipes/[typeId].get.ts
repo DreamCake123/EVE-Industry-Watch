@@ -41,6 +41,53 @@ function findBlueprintTypeId(itemTypeId: number, typeNames: Record<number, strin
   return null
 }
 
+// Helper to read text assets in both dev and serverless deployments
+async function readCsvRecords(fileName: string): Promise<any[]> {
+  // Try Nitro storage mounts first
+  try {
+    // Custom storage mount (see nuxt.config.ts nitro.storage.recipes)
+    const recipesStorage: any = useStorage('recipes:')
+    if (recipesStorage) {
+      const raw = await recipesStorage.getItemRaw(fileName)
+      if (raw) {
+        const text = Buffer.from(raw).toString('utf-8')
+        return parse(text, { columns: true, skip_empty_lines: true })
+      }
+    }
+  } catch (e) {
+    // no-op fallback
+  }
+
+  try {
+    // Default server assets storage (server/assets)
+    const assetsStorage: any = useStorage('assets:')
+    if (assetsStorage) {
+      const raw = await assetsStorage.getItemRaw(fileName)
+      if (raw) {
+        const text = Buffer.from(raw).toString('utf-8')
+        return parse(text, { columns: true, skip_empty_lines: true })
+      }
+    }
+  } catch (e) {
+    // no-op fallback
+  }
+
+  // Fallback to filesystem (works locally; may not exist in serverless)
+  const candidates = [
+    path.join(process.cwd(), 'server', 'assets', fileName),
+    path.join(process.cwd(), 'assets', fileName),
+    path.join(process.cwd(), 'scripts', 'data', fileName)
+  ]
+  for (const p of candidates) {
+    if (fs.existsSync(p)) {
+      const text = fs.readFileSync(p, 'utf-8')
+      return parse(text, { columns: true, skip_empty_lines: true })
+    }
+  }
+
+  throw createError({ statusCode: 404, statusMessage: `Asset not found: ${fileName}` })
+}
+
 export default defineEventHandler(async (event): Promise<RecipeResponse> => {
   try {
     const typeId = getRouterParam(event, 'typeId')
@@ -56,48 +103,28 @@ export default defineEventHandler(async (event): Promise<RecipeResponse> => {
 
     const typeIdNumber = Number(typeId)
 
-    // Read the industry activity materials CSV
-    const materialsPath = path.join(process.cwd(), 'assets', 'industryActivityMaterials.csv')
-    const productsPath = path.join(process.cwd(), 'assets', 'industryActivityProducts.csv')
-    const typesPath = path.join(process.cwd(), 'assets', 'invTypes.csv')
+    // Load CSV datasets robustly
+    const materialRecords = await readCsvRecords('industryActivityMaterials.csv')
 
-    if (!fs.existsSync(materialsPath)) {
-      throw createError({
-        statusCode: 404,
-        statusMessage: 'Recipe data not found'
-      })
-    }
-
-    // Parse materials CSV
-    const materialsData = fs.readFileSync(materialsPath, 'utf-8')
-    const materialRecords = parse(materialsData, {
-      columns: true,
-      skip_empty_lines: true
-    })
-
-    // Parse products CSV for output quantities
     let productRecords: any[] = []
-    if (fs.existsSync(productsPath)) {
-      const productsData = fs.readFileSync(productsPath, 'utf-8')
-      productRecords = parse(productsData, {
-        columns: true,
-        skip_empty_lines: true
-      })
+    try {
+      productRecords = await readCsvRecords('industryActivityProducts.csv')
+    } catch {
+      productRecords = []
     }
 
-    // Parse types CSV for material names
+    // Parse types for names
     let typeNames: Record<number, string> = {}
-    if (fs.existsSync(typesPath)) {
-      const typesData = fs.readFileSync(typesPath, 'utf-8')
-      const typeRecords = parse(typesData, {
-        columns: true,
-        skip_empty_lines: true
-      })
-      
-      typeNames = typeRecords.reduce((acc: Record<number, string>, record: any) => {
-        acc[Number(record.TypeID)] = record.TypeName
+    try {
+      const typeRecords = await readCsvRecords('invTypes.csv')
+      typeNames = (typeRecords as any[]).reduce((acc: Record<number, string>, record: any) => {
+        const id = Number(record.TypeID ?? record.typeID ?? record.typeId)
+        const name = record.TypeName ?? record.typeName ?? record.name
+        if (!isNaN(id) && name) acc[id] = name
         return acc
       }, {})
+    } catch {
+      typeNames = {}
     }
 
     // Try to find the blueprint type ID for the given item type ID
@@ -105,7 +132,7 @@ export default defineEventHandler(async (event): Promise<RecipeResponse> => {
     const searchTypeId = blueprintTypeId || typeIdNumber
 
     // Filter records for the blueprint type ID (or original if no blueprint found)
-    const allRecords = materialRecords.filter((record: any) => 
+    const allRecords = (materialRecords as any[]).filter((record: any) => 
       Number(record.typeID) === searchTypeId
     )
 
@@ -166,7 +193,7 @@ export default defineEventHandler(async (event): Promise<RecipeResponse> => {
     const activityId = Number(recipeRecords[0].activityID)
     
     // Find output quantity from products data
-    const productRecord = productRecords.find((record: any) => 
+    const productRecord = (productRecords as any[]).find((record: any) => 
       Number(record.typeID) === searchTypeId && Number(record.activityID) === activityId
     )
     const outputQuantity = productRecord ? Number(productRecord.quantity) : 1

@@ -17,6 +17,13 @@ export default defineNuxtConfig({
   },
   // Configure server-side rendering and API routes
   nitro: {
+    storage: {
+      // Expose CSV assets from project into Nitro storage
+      'recipes:': {
+        driver: 'fs',
+        base: './assets'
+      }
+    },
     routeRules: {
       // Cache market data for 5 minutes
       '/api/markets/**': { 
@@ -32,7 +39,14 @@ export default defineNuxtConfig({
       '/api/types/**': { 
         cors: true, 
         headers: { 'cache-control': 's-maxage=86400' } 
+      },
+      '/api/recipes/**': {
+        cors: true,
+        headers: { 'cache-control': 's-maxage=86400' }
       }
+    },
+    prerender: {
+      crawlLinks: false
     }
   },
   // Add global CSS and other configurations
