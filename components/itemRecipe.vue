@@ -110,7 +110,9 @@
                 this.recipeError = null;
                 
                 try {
-                    const response: any = await $fetch(`/api/recipes/${typeId}`);
+                    const response: any = await $fetch(`/api/recipes/${typeId}` , {
+                        params: { v: Date.now() }
+                    });
                     
                     if (response.success && response.data) {
                         // Store the original recipe data

@@ -43,36 +43,33 @@ function findBlueprintTypeId(itemTypeId: number, typeNames: Record<number, strin
 
 // Helper to read text assets in both dev and serverless deployments
 async function readCsvRecords(fileName: string): Promise<any[]> {
-  // Try Nitro storage mounts first
+  // Try default Nitro server assets first (server/assets -> assets:)
   try {
-    // Custom storage mount (see nuxt.config.ts nitro.storage.recipes)
-    const recipesStorage: any = useStorage('recipes:')
-    if (recipesStorage) {
-      const raw = await recipesStorage.getItemRaw(fileName)
-      if (raw) {
-        const text = Buffer.from(raw).toString('utf-8')
-        return parse(text, { columns: true, skip_empty_lines: true })
-      }
-    }
-  } catch (e) {
-    // no-op fallback
-  }
-
-  try {
-    // Default server assets storage (server/assets)
     const assetsStorage: any = useStorage('assets:')
     if (assetsStorage) {
-      const raw = await assetsStorage.getItemRaw(fileName)
-      if (raw) {
-        const text = Buffer.from(raw).toString('utf-8')
-        return parse(text, { columns: true, skip_empty_lines: true })
+      const text = await assetsStorage.getItem(fileName)
+      if (text) {
+        return parse(String(text), { columns: true, skip_empty_lines: true })
       }
     }
   } catch (e) {
-    // no-op fallback
+    // ignore and fallback
   }
 
-  // Fallback to filesystem (works locally; may not exist in serverless)
+  // Try custom storage mount to project /assets
+  try {
+    const recipesStorage: any = useStorage('recipes:')
+    if (recipesStorage) {
+      const text = await recipesStorage.getItem(fileName)
+      if (text) {
+        return parse(String(text), { columns: true, skip_empty_lines: true })
+      }
+    }
+  } catch (e) {
+    // ignore and fallback
+  }
+
+  // Fallback to filesystem (local dev)
   const candidates = [
     path.join(process.cwd(), 'server', 'assets', fileName),
     path.join(process.cwd(), 'assets', fileName),
@@ -85,7 +82,7 @@ async function readCsvRecords(fileName: string): Promise<any[]> {
     }
   }
 
-  throw createError({ statusCode: 404, statusMessage: `Asset not found: ${fileName}` })
+  throw createError({ statusCode: 404, statusMessage: `Asset not found in assets:/recipes:/fs -> ${fileName}` })
 }
 
 export default defineEventHandler(async (event): Promise<RecipeResponse> => {
